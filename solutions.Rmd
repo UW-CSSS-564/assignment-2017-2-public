@@ -1,0 +1,26 @@
+---
+title: "STAT/CSSS 564: Assignment 2 Solutions"
+author: Your Name Here
+output: html_document
+---
+
+Put R packages used in a single chunk:
+```{r}
+library("rstan")
+```
+
+
+## How much does the prior influence the posterior?
+
+### Q1
+
+### Q2
+
+### Q3
+
+### Q4
+
+### Q5
+
+### Q6
+
