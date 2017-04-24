@@ -34,11 +34,11 @@ $$
 
 A normal prior for $\mu$ is [conjugate](https://en.wikipedia.org/wiki/Conjugate_prior) to a normal likelihood, meaning that the posterior distribution is also normal:
 $$
-\mu | x \sim N(\frac{1}{\sigma_0^2} \mu_0 + \frac{n}{\sigma^2} \bar{x}, \frac{1}{\sigma_0^2} + \frac{n}{\sigma^2})
+\mu | x \sim N(\frac{\frac{1}{\sigma_0^2} \mu_0 + \frac{n}{\sigma^2} \bar{x}}{\frac{1}{\sigma_0^2} + \frac{n}{\sigma^2}}, \frac{1}{\sigma_0^2} + \frac{n}{\sigma^2})
 $$
 
 **Q1** In your own words, what is a conjugate prior? What are the advantages and disadvantages of such a prior?
-Suppose that instead of a normal prior for $\mu$, a non-conjugate distribution such as the [Laplace distribution](https://en.wikipedia.org/wiki/Laplace_distribution) were used. What would the form of the posterior distribution be? Why might a normal prior be preferred?
+Suppose that instead of a normal prior for $\mu$, a non-conjugate distribution such as the [Laplace distribution](https://en.wikipedia.org/wiki/Laplace_distribution) were used. Write down the posterior density function in this case. Why might a normal prior be preferred?
 
 **Q2** Describe the effects of the following on inference about $\mu$:
 
