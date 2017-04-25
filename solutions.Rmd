@@ -1,6 +1,6 @@
 ---
 title: "STAT/CSSS 564: Assignment 2 Solutions"
-author: Your Name Here
+author: Nathan Abe
 output: html_document
 ---
 
@@ -13,14 +13,75 @@ library("rstan")
 ## How much does the prior influence the posterior?
 
 ### Q1
+The conjugate prior is when the prior distribution matches the same distribution family as the posterior distribtuion. Some advantages of of a conjugate prior are it is easy to deal with mathematically and computationally and it is interpretable as additional data.  Some disadvantages are it can be overly restrictive and some prior beliefs can not be described.  If a non-conjugate prior is used, such as a Leplace Distribtution, then the posterior disribution would no longer be normal, but something else.  A normal distribtution used as the prior would be preferred because it is computationally easier to calculate and you know that you would get a normal distribtution as the posterior.  
 
 ### Q2
+Lots of data vs. not much data: More data creates smaller variance around the mean, means you can more more accurately predict what the mean is. 
+
+Strong prior information vs. weak prior information: Strong priors constrain the values of what the mean could be in the model more than weak priors would. 
+
+Lots vs. little noise in the data: More noise means less accuracy of the mean and can throw off the posterior. 
+
+Data that is incompatible with prior vs. data that is compatible with the prior: This basically means that if you have data that is not complatible with the prior, then the data will skew the mean.  When the data is compatible with the prior, your data then reflects the prior distribution and the mean would be more accuately estimated. 
 
 ### Q3
+```{r echo=T}
+data <- read.csv("data/pr2data.csv", header=T)
+
+lm.data <- lm(x~., data=data)
+summary(lm.data)
+mean(data$x)
+var(data)
+confint(lm.data, level = 0.97)
+```
+The mean of the data is 10, which is the same as the intercept value. The variance of the data is 104.31 and the 97% confidence interval is 9.298 to 10.702.  There is a 97% probability the mean is contain within 9.266 to 10.634.
 
 ### Q4
+```{r echo=T}
+data1 <- list(N = dim(data)[1], x=data$x)
+fit.data <- stan(file="data.stan", data=data1, iter=1000, chain=2)
+print(fit.data)
+
+#gives 97% confidence interval
+beta0 <- unlist(extract(fit.data, pars = "beta0"))
+print(quantile(beta0, probs = c(0.015, 0.985)))
+print(var(beta0))
+
+```
+I would say this prior distribution is modestly informative.  I say this because it is not uniform, which would be uninformative and there are probably many other distributions that are highly informative or more informative than the normal distribution as the prior distribution.  
+
+Given the assumed model, there is a 97% chance that the mean (10) is captured between the values 9.33 and 10.70.
 
 ### Q5
+```{r echo=T}
+#creates sample distribution
+x <- rnorm(n=10e4, mean=10, sd=10)
+
+#concatenates x and data
+con_data <-c(x, data$x)
+con_data2 <- data.frame(con_data)
+
+#linear model
+lm.data2 <- lm(con_data ~ . , data=con_data2)
+summary(lm.data2)
+mean(con_data2$con_data)
+var(con_data2)
+confint(lm.data2, level = 0.97)
+
+#Bayesian Model
+data2 <- list(N = dim(con_data2)[1], x=con_data2$con_data)
+fit.data2 <- stan(file="data2.stan", data=data2, iter=1000, chain=2)
+print(fit.data2)
+
+Beta0 <- unlist(extract(fit.data2, pars = "beta0"))
+print(quantile(Beta0, probs = c(0.015, 0.985)))
+print(var(Beta0))
+```
+Both of these models give a value for the mean around 10. The linear model gives a variance of 100.18 for the data, while the variance of the mean in the bayesian model is 0..001.  The 97% confidence interval of the linear model is 9.93 to 10.07, while the 97% confidence interval of the bayesian model is 9.93 to 10.06.  The means and confidence intervals are approximately the same, while the variance differs because of the what the reference is to calculate the variance.
 
 ### Q6
+For the Bayesian model, we have a constant uniform prior, which means we are basically calculating the likelihood function multiplied by a constant, which should give us approximately the same values as the standard linear model, which we defined as normal.  We can interpret the prior as having more data points, meaning we are assuming we have a higher degree of accuracy and precision.
+
+### Q7
+We assumed we knew the range of values $\mu$ would take because be defined our prior standard deviation to have a value of 10.  By using an improper flat prior, we tend to have values that are less accurate than using a proper prior.  
 
