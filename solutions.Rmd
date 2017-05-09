@@ -9,6 +9,8 @@ Put R packages used in a single chunk:
 rm(list = ls())
 library("rstan")
 set.seed(042317)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 
 # Load data
 data = read.csv("pr2data.csv", header = T)
@@ -19,38 +21,39 @@ data = read.csv("pr2data.csv", header = T)
 
 
 ### Q1
-A class of prior densities is conjugate for a sampling model $p(y_1, . . . , y_n|θ)$ if the posterior distribution is also in the class. In other words, if the prior and posterior distribution belong to the same distribution family, then the prior distribution is called *conjugate prior*. The advantage of using a conjugate prior is that it make the estimation of posterior distribution a little bit simpler. In other words, if we know the distribution of prior, then we know what the approxiate distribution of posterior and the formula for normalizing the posterier. In that case, the posterior distribution could be approximated with the Monte Carlo method or any other methods. The main disadvantage of conjugate prior is that it is not flexible enough to capture all possible forms of prior information. 
+A class of prior densities is conjugate for a sampling model $p(y_1, . . . , y_n|θ)$ if the posterior distribution is also in the class. In other words, if the prior and posterior distribution belong to the same distribution family, then the prior distribution is called *conjugate prior*. The advantage of using a conjugate prior is that it make the estimation of posterior distribution a little bit simpler. In other words, it leads to analytically tractable evaluation of the posterior (i.e. we can just calculate the posterior by hand, no computation required), which is nice. If we know the distribution of prior, then we know what the approxiate distribution of posterior and the formula for normalizing the posterier. The main disadvantage of conjugate prior is that it is not flexible enough to capture all possible forms of prior information and it is not always appropriate.
+
 
 Suppose the prior distribution is non-conjugate such as the Laplace distribution, then we wouldn't be able to assume the distribution of the posterier directly. But we know:
 $$ f(\mu) = \frac {1} {\sqrt{2 \sigma_0^2 \pi}} e^{\frac{-(x-\mu_0)^2}{2\sigma_0^2}}$$
 $$ f(x|\mu) = \frac {1} {\sqrt{2 \sigma^2 \pi}} e^{\frac{-(x-\mu)^2}{2\sigma^2}}$$
-$$f(x|\mu, b) = \frac{1}{2b} exp(- \frac{|x-\mu|}{b})$$
+The PDF for laplace distrubtion is \frac{1}{2b} exp(- \frac{|x-\mu|}{b})$
 
 So we know that posterier distribtion with a Laplace prior is
-$$f(\mu|b, x) \propto \frac{1}{2b} exp(- \frac{|x-\mu|}{b}) * \frac {1} {\sqrt{2 \sigma_0^2 \pi}} e^{\frac{-(x-\mu_0)^2}{2\sigma_0^2}}$$
-Finally, a normal prior may be preferred because we then know the distribution of posterier is normal distribution. In this case, we could use the probability density function (PDF) of normal distribution to calculate and normalize the posterier distribution, which makes the estimation and interpretation of posterier much easier. 
+$$p(\mu | x) = \frac{1}{\sqrt{2 \pi \sigma^2}^n} e^{-\frac{1}{2 \sigma^2} \sum_i (x_i - \mu)^2} \frac{1}{2 \sigma_0} e^{-\frac{|\mu - \mu_0|}{\sigma_0}}$$
+Finally, a normal prior may be preferred because it happens to be equivalent to an $“L_2”$-penalization of $\mu$ and therefore it makes the analytical evaluation easlier. but in practice, we should only use a normal prior if we can justify it.
 
 ### Q2
 ####Lots of data vs. not much data
-From the question we know that the variance is inversely propritional to the amount of data. The more data we have, the less variance there. When the data goes to infinite, the distribution of posterier will becomes narrower and tighter as the variance become much smaller. However, if we only have a few data points, the estimation of the posterier become less precise so we may not be able to draw a valid inference about $\mu$. 
+From the question we know that the variance is inversely propritional to the amount of data. As the number of observations grows, the posterior mean will grow closer to the mean of the data and farther from the prior mean.Meanwhile, the more data we have, the less variance there. When the data goes to infinite, the distribution of posterier will becomes narrower and tighter as the variance become much smaller. However, if we only have a few data points, the posterior mean will be close to the prior mean (when there is no data, the posterior simply is the prior and so the posterior mean is the prior mean). 
 
 
 ####Strong prior information vs. weak prior information
-Strong prior information would dominate the information contained in the data being analyzed and thus has an strong influence on the posterier distribution. In this case, the posterier distribution may be led towards the prior. Weak prior information is less dominant and thus it allows the data speak, therefore, the results is more data-driven.
+Strong prior information would dominate the information contained in the data being analyzed and thus has an strong influence on the posterier distribution. In this case, the posterier distribution may be led towards the prior mean. Weak prior information is less dominant and thus it allows the data speak, therefore, the results is more data-driven, meaning that the data will get a larger share of the weighted average.
 
 ####Lots vs. little noise in the data
-If there are a lot of noises in the data, it increases the variance and thus cause the posterer distribution to be wider. However, if there are little noise noise in the data, the posterier will become tighter given its small variance.
+If there are a lot of noises in the data, the weight of the data’s mean will be lower and the posterior mean will be closer to the prior mean. The reverse is true when the data is not very variable.
 
 
 ####Data that is incompatible with the prior vs. data that is compatible with the prior
-If the data is compatible with the prior, then the variance should be reduced and the estimation of mean should be more likely to be close to the true mean in terms of the posterier distribution. Therefore, we should have a much narrower posterier distribution which should provide valid inference about $\mu$. Contrarily, if the data is not compatible with prior, then there are much more noise in the data which increase variance and thus will lead to a much wider distribution of posterier and we may not have valid inference about $\mu$. 
+If the data is compatible with the prior, none of the things mentioned above matter very much, because we’re taking a weighted average of two things that are already close. Therefore, we should have a much narrower posterier distribution which should provide valid inference about $\mu$. Contrarily, if the data is not compatible with prior, then there are much more noise in the data which increase variance and our choice of prior is a lot more influential as we could bias our inference by picking a prior based on the data.
 
 ### Q3
-```{r 3}
+```{r 3, echo=FALSE}
 # linear model with intercept only
 m1 = lm(x~1, data = data)
 # estimated mean
-m1
+summary(m1)
 # estimated variance
 summary(m1)$sigma^2
 # 97% CI
@@ -64,7 +67,7 @@ cat("97% CI: [9.30, 10.70]")
 A linear model was fitted with just an intercept. Since it is an intercept-only model, the estiamted mean is equal to the coefficient of the intercept, which is 10. The variance is 104.3064. The centered 97% confidence intereval for $\mu$ is [9.30, 10.70], which means: under the assumed model, 95% of the time the estiamted confidence intervals capture the true $\mu$ or the probability that $\mu$ lies between 9.30 and 10.70 is 0.95.
 
 ### Q4
-```{r 4}
+```{r 4, echo=FALSE}
 # list all data needed for m2
 m2_data = list(
   y = data$x,
@@ -76,17 +79,16 @@ m2
 # 97% CI
 print(m2, prob = c(0.005, 0.985))
 # Result results
-cat("Mean:", 10.01) 
-cat("Variance:", 0.00) # very close to 0.01
 cat("97% CI: [9.76, 10.19]")
 ```
 
-I would characterize this prior as highly informative because it provides very specific and relatively precise information about the variable so that we know $\mu$ follows a normal distribution with mean of 10 and variance of 0.01. Note the variance is very small rather than some general numbers like 10000. Give the small variance provided, I belieive this prior is highly informative. The estiamted mean is 10.1. The variance is 0.00. The centered 97% confidence intereval for $\mu$ is [9.76, 10.19], which means: under the assumed model, the probability that $\mu$ lies between 9.76 and 10.19 is 0.95.
+I would characterize this prior as highly informative because it provides very specific and relatively precise information about the variable so that we know $\mu$ follows a normal distribution with mean of 10 and variance of 0.01. Note the data have vriance 100 and 1000, so the data's weight in the posterior mean is 1000/100 = 10 and the prior's is 1/(0.1*0.1) = 100, so the prior exerts a lot of influence. The centered 97% confidence intereval for $\mu$ is [9.76, 10.19], which means: under the assumed model, the probability that mean parameter lies between 9.76 and 10.19 is 0.97.
 
 ### Q5
-```{r 5}
+```{r 5, echo=FALSE}
 # generate 10000 independent observations from a N(10, 100) distribution
 data_q5 = rnorm(10000, mean = 10, sd = 10)
+data_q5 = data_q5 - mean(data_q5) + 10 # center at mean 10
 data_q5 = as.data.frame(data_q5)
 names(data_q5) = "x"
 # concatenate new data to the old data
@@ -94,15 +96,10 @@ data_cat = rbind(data, data_q5)
 
 # fit standard linear model with intercet only
 m3 = lm(x ~ 1, data = data_cat)
-# estimated mean
 m3
-# estiamte variance
-summary(m3)$sigma^2
 # 97% CI
 confint(m3, level = 0.97)
 # Result results
-cat("Standard lm mean:", 10.19) 
-cat("Standard lm variance:", 100.36) 
 cat("Standard lm 97% CI: [9.98, 10.40]")
 
 
@@ -114,17 +111,14 @@ m4_data = list(
 )
 # fit the bayesian model
 m4 = stan("lm_q5.stan", data = m4_data, iter = 1000, chains = 2)
-m4
 # 97% CI
 print(m4, prob = c(0.005, 0.985))
 # Result results
-cat("Bayesian mean:", 10.19) 
-cat("Bayesian variance:", 0.00) # very close to 0.01
 cat("Bayesian 97% CI: [9.91, 10.38]")
 ```
 
 ### Q6
-In Q4 we fitted a bayesian model with a highly informative prior ($N(10, 0.1^2)$) with a few observations (N = 10000), while in Q5 we fitted another bayesian model with a improper flat prior with a much larger sample size (N = 11000). Results show that the means, variances and the confidence intervals for the two obtained posterier distributions are very close. That indicates that when the prior is uninformative, adding more sample sizes could still lead to a valid estiamtion of posterier disribution. Linking back to the formula for the posterier distribution $\mu|x$ given before Q1, the variance is inverse proportional to the amount of data. The more data we have, the less variance in the model. Therefore, the inferrence could still be valid even though we have an uninformative prior as long as we have sufficient data.
+In Q4 we fitted a bayesian model with a highly informative prior ($N(10, 0.1^2)$) with a few observations (N = 10000), while in Q5 we fitted another bayesian model with a improper flat prior with a much larger sample size (N = 11000). Here we have a prior with variance that is 1/10000 that of the data. Meanwhile, the variance of the mean of the 10,000 new observations is $\frac{100}{10^4}=\frac{1}{0.1^2}$, which is the same variance as the prior on $\mu$ had and hence should yield similar inference. Results show that the means, variances and the confidence intervals for the two obtained posterier distributions are very close. That indicates that when the prior is uninformative, adding more sample sizes could still lead to a valid estiamtion of posterier disribution. Linking back to the formula for the posterier distribution $\mu|x$ given before Q1, the variance is inverse proportional to the amount of data. The more data we have, the less variance in the model. Therefore, the inferrence could still be valid even though we have an uninformative prior as long as we have sufficient data.
 
 ### Q7
 Two simplifying assumptions were made in this problem. The first assumption is that we assume the variance is known and it is equal to a constant number (variance is equal to 100). The second assumption is that the additional data are centered to have a mean of 10, which is rarely known and observed to us in real-life sitatuions. If we relax those assumptions, then the variance has to be estimated as well and the standard error of mean is going to change when estimating mean, which may change the distribution of the posterier.

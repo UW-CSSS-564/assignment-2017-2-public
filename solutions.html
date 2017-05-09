@@ -135,6 +135,8 @@ library(&quot;rstan&quot;)</code></pre>
 ## rstan_options(auto_write = TRUE)
 ## options(mc.cores = parallel::detectCores())</code></pre>
 <pre class="r"><code>set.seed(042317)
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 
 # Load data
 data = read.csv(&quot;pr2data.csv&quot;, header = T)</code></pre>
@@ -142,389 +144,115 @@ data = read.csv(&quot;pr2data.csv&quot;, header = T)</code></pre>
 <h2>How much does the prior influence the posterior?</h2>
 <div id="q1" class="section level3">
 <h3>Q1</h3>
-<p>A class of prior densities is conjugate for a sampling model <span class="math inline">\(p(y_1, . . . , y_n|θ)\)</span> if the posterior distribution is also in the class. In other words, if the prior and posterior distribution belong to the same distribution family, then the prior distribution is called <em>conjugate prior</em>. The advantage of using a conjugate prior is that it make the estimation of posterior distribution a little bit simpler. In other words, if we know the distribution of prior, then we know what the approxiate distribution of posterior and the formula for normalizing the posterier. In that case, the posterior distribution could be approximated with the Monte Carlo method or any other methods. The main disadvantage of conjugate prior is that it is not flexible enough to capture all possible forms of prior information.</p>
-<p>Suppose the prior distribution is non-conjugate such as the Laplace distribution, then we wouldn’t be able to assume the distribution of the posterier directly. But we know: <span class="math display">\[ f(\mu) = \frac {1} {\sqrt{2 \sigma_0^2 \pi}} e^{\frac{-(x-\mu_0)^2}{2\sigma_0^2}}\]</span> <span class="math display">\[ f(x|\mu) = \frac {1} {\sqrt{2 \sigma^2 \pi}} e^{\frac{-(x-\mu)^2}{2\sigma^2}}\]</span> <span class="math display">\[f(x|\mu, b) = \frac{1}{2b} exp(- \frac{|x-\mu|}{b})\]</span></p>
-<p>So we know that posterier distribtion with a Laplace prior is <span class="math display">\[f(\mu|b, x) \propto \frac{1}{2b} exp(- \frac{|x-\mu|}{b}) * \frac {1} {\sqrt{2 \sigma_0^2 \pi}} e^{\frac{-(x-\mu_0)^2}{2\sigma_0^2}}\]</span> Finally, a normal prior may be preferred because we then know the distribution of posterier is normal distribution. In this case, we could use the probability density function (PDF) of normal distribution to calculate and normalize the posterier distribution, which makes the estimation and interpretation of posterier much easier.</p>
+<p>A class of prior densities is conjugate for a sampling model <span class="math inline">\(p(y_1, . . . , y_n|θ)\)</span> if the posterior distribution is also in the class. In other words, if the prior and posterior distribution belong to the same distribution family, then the prior distribution is called <em>conjugate prior</em>. The advantage of using a conjugate prior is that it make the estimation of posterior distribution a little bit simpler. In other words, it leads to analytically tractable evaluation of the posterior (i.e. we can just calculate the posterior by hand, no computation required), which is nice. If we know the distribution of prior, then we know what the approxiate distribution of posterior and the formula for normalizing the posterier. The main disadvantage of conjugate prior is that it is not flexible enough to capture all possible forms of prior information and it is not always appropriate.</p>
+<p>Suppose the prior distribution is non-conjugate such as the Laplace distribution, then we wouldn’t be able to assume the distribution of the posterier directly. But we know: <span class="math display">\[ f(\mu) = \frac {1} {\sqrt{2 \sigma_0^2 \pi}} e^{\frac{-(x-\mu_0)^2}{2\sigma_0^2}}\]</span> <span class="math display">\[ f(x|\mu) = \frac {1} {\sqrt{2 \sigma^2 \pi}} e^{\frac{-(x-\mu)^2}{2\sigma^2}}\]</span> The PDF for laplace distrubtion is  exp(- )$</p>
+<p>So we know that posterier distribtion with a Laplace prior is <span class="math display">\[p(\mu | x) = \frac{1}{\sqrt{2 \pi \sigma^2}^n} e^{-\frac{1}{2 \sigma^2} \sum_i (x_i - \mu)^2} \frac{1}{2 \sigma_0} e^{-\frac{|\mu - \mu_0|}{\sigma_0}}\]</span> Finally, a normal prior may be preferred because it happens to be equivalent to an <span class="math inline">\(“L_2”\)</span>-penalization of <span class="math inline">\(\mu\)</span> and therefore it makes the analytical evaluation easlier. but in practice, we should only use a normal prior if we can justify it.</p>
 </div>
 <div id="q2" class="section level3">
 <h3>Q2</h3>
 <div id="lots-of-data-vs.not-much-data" class="section level4">
 <h4>Lots of data vs. not much data</h4>
-<p>From the question we know that the variance is inversely propritional to the amount of data. The more data we have, the less variance there. When the data goes to infinite, the distribution of posterier will becomes narrower and tighter as the variance become much smaller. However, if we only have a few data points, the estimation of the posterier become less precise so we may not be able to draw a valid inference about <span class="math inline">\(\mu\)</span>.</p>
+<p>From the question we know that the variance is inversely propritional to the amount of data. As the number of observations grows, the posterior mean will grow closer to the mean of the data and farther from the prior mean.Meanwhile, the more data we have, the less variance there. When the data goes to infinite, the distribution of posterier will becomes narrower and tighter as the variance become much smaller. However, if we only have a few data points, the posterior mean will be close to the prior mean (when there is no data, the posterior simply is the prior and so the posterior mean is the prior mean).</p>
 </div>
 <div id="strong-prior-information-vs.weak-prior-information" class="section level4">
 <h4>Strong prior information vs. weak prior information</h4>
-<p>Strong prior information would dominate the information contained in the data being analyzed and thus has an strong influence on the posterier distribution. In this case, the posterier distribution may be led towards the prior. Weak prior information is less dominant and thus it allows the data speak, therefore, the results is more data-driven.</p>
+<p>Strong prior information would dominate the information contained in the data being analyzed and thus has an strong influence on the posterier distribution. In this case, the posterier distribution may be led towards the prior mean. Weak prior information is less dominant and thus it allows the data speak, therefore, the results is more data-driven, meaning that the data will get a larger share of the weighted average.</p>
 </div>
 <div id="lots-vs.little-noise-in-the-data" class="section level4">
 <h4>Lots vs. little noise in the data</h4>
-<p>If there are a lot of noises in the data, it increases the variance and thus cause the posterer distribution to be wider. However, if there are little noise noise in the data, the posterier will become tighter given its small variance.</p>
+<p>If there are a lot of noises in the data, the weight of the data’s mean will be lower and the posterior mean will be closer to the prior mean. The reverse is true when the data is not very variable.</p>
 </div>
 <div id="data-that-is-incompatible-with-the-prior-vs.data-that-is-compatible-with-the-prior" class="section level4">
 <h4>Data that is incompatible with the prior vs. data that is compatible with the prior</h4>
-<p>If the data is compatible with the prior, then the variance should be reduced and the estimation of mean should be more likely to be close to the true mean in terms of the posterier distribution. Therefore, we should have a much narrower posterier distribution which should provide valid inference about <span class="math inline">\(\mu\)</span>. Contrarily, if the data is not compatible with prior, then there are much more noise in the data which increase variance and thus will lead to a much wider distribution of posterier and we may not have valid inference about <span class="math inline">\(\mu\)</span>.</p>
+<p>If the data is compatible with the prior, none of the things mentioned above matter very much, because we’re taking a weighted average of two things that are already close. Therefore, we should have a much narrower posterier distribution which should provide valid inference about <span class="math inline">\(\mu\)</span>. Contrarily, if the data is not compatible with prior, then there are much more noise in the data which increase variance and our choice of prior is a lot more influential as we could bias our inference by picking a prior based on the data.</p>
 </div>
 </div>
 <div id="q3" class="section level3">
 <h3>Q3</h3>
-<pre class="r"><code># linear model with intercept only
-m1 = lm(x~1, data = data)
-# estimated mean
-m1</code></pre>
 <pre><code>## 
 ## Call:
 ## lm(formula = x ~ 1, data = data)
 ## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -30.828  -7.041  -0.222   7.054  31.692 
+## 
 ## Coefficients:
-## (Intercept)  
-##          10</code></pre>
-<pre class="r"><code># estimated variance
-summary(m1)$sigma^2</code></pre>
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   10.000      0.323   30.96   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 10.21 on 999 degrees of freedom</code></pre>
 <pre><code>## [1] 104.3064</code></pre>
-<pre class="r"><code># 97% CI
-confint(m1, level = 0.97)</code></pre>
 <pre><code>##                1.5 %   98.5 %
 ## (Intercept) 9.298134 10.70187</code></pre>
-<pre class="r"><code># Result results
-cat(&quot;Mean:&quot;, 10) </code></pre>
 <pre><code>## Mean: 10</code></pre>
-<pre class="r"><code>cat(&quot;Variance:&quot;, 104.31) </code></pre>
 <pre><code>## Variance: 104.31</code></pre>
-<pre class="r"><code>cat(&quot;97% CI: [9.30, 10.70]&quot;)</code></pre>
 <pre><code>## 97% CI: [9.30, 10.70]</code></pre>
 <p>A linear model was fitted with just an intercept. Since it is an intercept-only model, the estiamted mean is equal to the coefficient of the intercept, which is 10. The variance is 104.3064. The centered 97% confidence intereval for <span class="math inline">\(\mu\)</span> is [9.30, 10.70], which means: under the assumed model, 95% of the time the estiamted confidence intervals capture the true <span class="math inline">\(\mu\)</span> or the probability that <span class="math inline">\(\mu\)</span> lies between 9.30 and 10.70 is 0.95.</p>
 </div>
 <div id="q4" class="section level3">
 <h3>Q4</h3>
-<pre class="r"><code># list all data needed for m2
-m2_data = list(
-  y = data$x,
-  N = nrow(data)
-)
-# fit the bayesian model
-m2 = stan(&quot;lm_q4.stan&quot;, data = m2_data, iter = 1000, chains = 2)</code></pre>
-<pre><code>## In file included from file13d5789af.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:12:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/gevv_vvv_vari.hpp:5:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/var.hpp:7:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/math/tools/config.hpp:13:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/config.hpp:39:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/config/compiler/clang.hpp:196:11: warning: 'BOOST_NO_CXX11_RVALUE_REFERENCES' macro redefined [-Wmacro-redefined]
-## #  define BOOST_NO_CXX11_RVALUE_REFERENCES
-##           ^
-## &lt;command line&gt;:6:9: note: previous definition is here
-## #define BOOST_NO_CXX11_RVALUE_REFERENCES 1
-##         ^
-## In file included from file13d5789af.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:42:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints.hpp:14:17: warning: unused function 'set_zero_all_adjoints' [-Wunused-function]
-##     static void set_zero_all_adjoints() {
-##                 ^
-## In file included from file13d5789af.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:43:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints_nested.hpp:17:17: warning: 'static' function 'set_zero_all_adjoints_nested' declared in header file should be declared 'static inline' [-Wunneeded-internal-declaration]
-##     static void set_zero_all_adjoints_nested() {
-##                 ^
-## In file included from file13d5789af.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:11:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat.hpp:60:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat/fun/autocorrelation.hpp:17:14: warning: function 'fft_next_good_size' is not needed and will not be emitted [-Wunneeded-internal-declaration]
-##       size_t fft_next_good_size(size_t N) {
-##              ^
-## In file included from file13d5789af.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:11:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat.hpp:299:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/arr.hpp:36:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/arr/functor/integrate_ode_rk45.hpp:13:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/numeric/odeint.hpp:61:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/numeric/odeint/util/multi_array_adaption.hpp:29:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array.hpp:21:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/base.hpp:28:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:42:43: warning: unused typedef 'index_range' [-Wunused-local-typedef]
-##       typedef typename Array::index_range index_range;
-##                                           ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:43:37: warning: unused typedef 'index' [-Wunused-local-typedef]
-##       typedef typename Array::index index;
-##                                     ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:53:43: warning: unused typedef 'index_range' [-Wunused-local-typedef]
-##       typedef typename Array::index_range index_range;
-##                                           ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:54:37: warning: unused typedef 'index' [-Wunused-local-typedef]
-##       typedef typename Array::index index;
-##                                     ^
-## 8 warnings generated.
-## 
-## SAMPLING FOR MODEL 'lm_q4' NOW (CHAIN 1).
-## 
-## Chain 1, Iteration:   1 / 1000 [  0%]  (Warmup)
-## Chain 1, Iteration: 100 / 1000 [ 10%]  (Warmup)
-## Chain 1, Iteration: 200 / 1000 [ 20%]  (Warmup)
-## Chain 1, Iteration: 300 / 1000 [ 30%]  (Warmup)
-## Chain 1, Iteration: 400 / 1000 [ 40%]  (Warmup)
-## Chain 1, Iteration: 500 / 1000 [ 50%]  (Warmup)
-## Chain 1, Iteration: 501 / 1000 [ 50%]  (Sampling)
-## Chain 1, Iteration: 600 / 1000 [ 60%]  (Sampling)
-## Chain 1, Iteration: 700 / 1000 [ 70%]  (Sampling)
-## Chain 1, Iteration: 800 / 1000 [ 80%]  (Sampling)
-## Chain 1, Iteration: 900 / 1000 [ 90%]  (Sampling)
-## Chain 1, Iteration: 1000 / 1000 [100%]  (Sampling)
-##  Elapsed Time: 0.011241 seconds (Warm-up)
-##                0.010371 seconds (Sampling)
-##                0.021612 seconds (Total)
-## 
-## 
-## SAMPLING FOR MODEL 'lm_q4' NOW (CHAIN 2).
-## 
-## Chain 2, Iteration:   1 / 1000 [  0%]  (Warmup)
-## Chain 2, Iteration: 100 / 1000 [ 10%]  (Warmup)
-## Chain 2, Iteration: 200 / 1000 [ 20%]  (Warmup)
-## Chain 2, Iteration: 300 / 1000 [ 30%]  (Warmup)
-## Chain 2, Iteration: 400 / 1000 [ 40%]  (Warmup)
-## Chain 2, Iteration: 500 / 1000 [ 50%]  (Warmup)
-## Chain 2, Iteration: 501 / 1000 [ 50%]  (Sampling)
-## Chain 2, Iteration: 600 / 1000 [ 60%]  (Sampling)
-## Chain 2, Iteration: 700 / 1000 [ 70%]  (Sampling)
-## Chain 2, Iteration: 800 / 1000 [ 80%]  (Sampling)
-## Chain 2, Iteration: 900 / 1000 [ 90%]  (Sampling)
-## Chain 2, Iteration: 1000 / 1000 [100%]  (Sampling)
-##  Elapsed Time: 0.01245 seconds (Warm-up)
-##                0.010928 seconds (Sampling)
-##                0.023378 seconds (Total)</code></pre>
-<pre class="r"><code>m2</code></pre>
 <pre><code>## Inference for Stan model: lm_q4.
 ## 2 chains, each with iter=1000; warmup=500; thin=1; 
 ## post-warmup draws per chain=500, total post-warmup draws=1000.
 ## 
-##         mean se_mean   sd    2.5%     25%     50%     75%   97.5% n_eff
-## mu     10.01    0.00 0.09    9.83    9.95   10.01   10.07   10.18   516
-## lp__ -521.48    0.03 0.65 -523.24 -521.65 -521.22 -521.07 -521.01   522
+##         mean se_mean  sd    2.5%     25%     50%     75%   97.5% n_eff
+## mu     10.01    0.01 0.1    9.79    9.95   10.01   10.07   10.19   311
+## lp__ -521.52    0.06 0.8 -523.95 -521.64 -521.20 -521.04 -521.01   157
 ##      Rhat
-## mu      1
-## lp__    1
+## mu   1.00
+## lp__ 1.02
 ## 
-## Samples were drawn using NUTS(diag_e) at Tue Apr 25 00:05:25 2017.
+## Samples were drawn using NUTS(diag_e) at Mon May  8 17:21:36 2017.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
-<pre class="r"><code># 97% CI
-print(m2, prob = c(0.005, 0.985))</code></pre>
 <pre><code>## Inference for Stan model: lm_q4.
 ## 2 chains, each with iter=1000; warmup=500; thin=1; 
 ## post-warmup draws per chain=500, total post-warmup draws=1000.
 ## 
-##         mean se_mean   sd    0.5%   98.5% n_eff Rhat
-## mu     10.01    0.00 0.09    9.76   10.19   516    1
-## lp__ -521.48    0.03 0.65 -524.67 -521.01   522    1
+##         mean se_mean  sd    0.5%   98.5% n_eff Rhat
+## mu     10.01    0.01 0.1    9.72   10.23   311 1.00
+## lp__ -521.52    0.06 0.8 -525.32 -521.01   157 1.02
 ## 
-## Samples were drawn using NUTS(diag_e) at Tue Apr 25 00:05:25 2017.
+## Samples were drawn using NUTS(diag_e) at Mon May  8 17:21:36 2017.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
-<pre class="r"><code># Result results
-cat(&quot;Mean:&quot;, 10.01) </code></pre>
-<pre><code>## Mean: 10.01</code></pre>
-<pre class="r"><code>cat(&quot;Variance:&quot;, 0.00) # very close to 0.01</code></pre>
-<pre><code>## Variance: 0</code></pre>
-<pre class="r"><code>cat(&quot;97% CI: [9.76, 10.19]&quot;)</code></pre>
 <pre><code>## 97% CI: [9.76, 10.19]</code></pre>
-<p>I would characterize this prior as highly informative because it provides very specific and relatively precise information about the variable so that we know <span class="math inline">\(\mu\)</span> follows a normal distribution with mean of 10 and variance of 0.01. Note the variance is very small rather than some general numbers like 10000. Give the small variance provided, I belieive this prior is highly informative. The estiamted mean is 10.1. The variance is 0.00. The centered 97% confidence intereval for <span class="math inline">\(\mu\)</span> is [9.76, 10.19], which means: under the assumed model, the probability that <span class="math inline">\(\mu\)</span> lies between 9.76 and 10.19 is 0.95.</p>
+<p>I would characterize this prior as highly informative because it provides very specific and relatively precise information about the variable so that we know <span class="math inline">\(\mu\)</span> follows a normal distribution with mean of 10 and variance of 0.01. Note the data have vriance 100 and 1000, so the data’s weight in the posterior mean is 1000/100 = 10 and the prior’s is 1/(0.1*0.1) = 100, so the prior exerts a lot of influence. The centered 97% confidence intereval for <span class="math inline">\(\mu\)</span> is [9.76, 10.19], which means: under the assumed model, the probability that mean parameter lies between 9.76 and 10.19 is 0.97.</p>
 </div>
 <div id="q5" class="section level3">
 <h3>Q5</h3>
-<pre class="r"><code># generate 10000 independent observations from a N(10, 100) distribution
-data_q5 = rnorm(10000, mean = 10, sd = 10)
-data_q5 = as.data.frame(data_q5)
-names(data_q5) = &quot;x&quot;
-# concatenate new data to the old data
-data_cat = rbind(data, data_q5)
-
-# fit standard linear model with intercet only
-m3 = lm(x ~ 1, data = data_cat)
-# estimated mean
-m3</code></pre>
 <pre><code>## 
 ## Call:
 ## lm(formula = x ~ 1, data = data_cat)
 ## 
 ## Coefficients:
 ## (Intercept)  
-##       9.919</code></pre>
-<pre class="r"><code># estiamte variance
-summary(m3)$sigma^2</code></pre>
-<pre><code>## [1] 100.928</code></pre>
-<pre class="r"><code># 97% CI
-confint(m3, level = 0.97)</code></pre>
+##          10</code></pre>
 <pre><code>##                1.5 %   98.5 %
-## (Intercept) 9.710902 10.12669</code></pre>
-<pre class="r"><code># Result results
-cat(&quot;Standard lm mean:&quot;, 10.19) </code></pre>
-<pre><code>## Standard lm mean: 10.19</code></pre>
-<pre class="r"><code>cat(&quot;Standard lm variance:&quot;, 100.36) </code></pre>
-<pre><code>## Standard lm variance: 100.36</code></pre>
-<pre class="r"><code>cat(&quot;Standard lm 97% CI: [9.98, 10.40]&quot;)</code></pre>
+## (Intercept) 9.792843 10.20716</code></pre>
 <pre><code>## Standard lm 97% CI: [9.98, 10.40]</code></pre>
-<pre class="r"><code># fit a bayesian model with normal likelihood and an improper flat prior
-# list all data needed for m2
-m4_data = list(
-  y = data_cat$x,
-  N = nrow(data_cat)
-)
-# fit the bayesian model
-m4 = stan(&quot;lm_q5.stan&quot;, data = m4_data, iter = 1000, chains = 2)</code></pre>
-<pre><code>## In file included from file13d54f3e3d3d.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:12:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/gevv_vvv_vari.hpp:5:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/var.hpp:7:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/math/tools/config.hpp:13:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/config.hpp:39:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/config/compiler/clang.hpp:196:11: warning: 'BOOST_NO_CXX11_RVALUE_REFERENCES' macro redefined [-Wmacro-redefined]
-## #  define BOOST_NO_CXX11_RVALUE_REFERENCES
-##           ^
-## &lt;command line&gt;:6:9: note: previous definition is here
-## #define BOOST_NO_CXX11_RVALUE_REFERENCES 1
-##         ^
-## In file included from file13d54f3e3d3d.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:42:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints.hpp:14:17: warning: unused function 'set_zero_all_adjoints' [-Wunused-function]
-##     static void set_zero_all_adjoints() {
-##                 ^
-## In file included from file13d54f3e3d3d.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core.hpp:43:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/core/set_zero_all_adjoints_nested.hpp:17:17: warning: 'static' function 'set_zero_all_adjoints_nested' declared in header file should be declared 'static inline' [-Wunneeded-internal-declaration]
-##     static void set_zero_all_adjoints_nested() {
-##                 ^
-## In file included from file13d54f3e3d3d.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:11:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat.hpp:60:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat/fun/autocorrelation.hpp:17:14: warning: function 'fft_next_good_size' is not needed and will not be emitted [-Wunneeded-internal-declaration]
-##       size_t fft_next_good_size(size_t N) {
-##              ^
-## In file included from file13d54f3e3d3d.cpp:8:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/src/stan/model/model_header.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math.hpp:4:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/rev/mat.hpp:11:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/mat.hpp:299:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/arr.hpp:36:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/StanHeaders/include/stan/math/prim/arr/functor/integrate_ode_rk45.hpp:13:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/numeric/odeint.hpp:61:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/numeric/odeint/util/multi_array_adaption.hpp:29:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array.hpp:21:
-## In file included from /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/base.hpp:28:
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:42:43: warning: unused typedef 'index_range' [-Wunused-local-typedef]
-##       typedef typename Array::index_range index_range;
-##                                           ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:43:37: warning: unused typedef 'index' [-Wunused-local-typedef]
-##       typedef typename Array::index index;
-##                                     ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:53:43: warning: unused typedef 'index_range' [-Wunused-local-typedef]
-##       typedef typename Array::index_range index_range;
-##                                           ^
-## /Library/Frameworks/R.framework/Versions/3.3/Resources/library/BH/include/boost/multi_array/concept_checks.hpp:54:37: warning: unused typedef 'index' [-Wunused-local-typedef]
-##       typedef typename Array::index index;
-##                                     ^
-## 8 warnings generated.
-## 
-## SAMPLING FOR MODEL 'lm_q5' NOW (CHAIN 1).
-## 
-## Chain 1, Iteration:   1 / 1000 [  0%]  (Warmup)
-## Chain 1, Iteration: 100 / 1000 [ 10%]  (Warmup)
-## Chain 1, Iteration: 200 / 1000 [ 20%]  (Warmup)
-## Chain 1, Iteration: 300 / 1000 [ 30%]  (Warmup)
-## Chain 1, Iteration: 400 / 1000 [ 40%]  (Warmup)
-## Chain 1, Iteration: 500 / 1000 [ 50%]  (Warmup)
-## Chain 1, Iteration: 501 / 1000 [ 50%]  (Sampling)
-## Chain 1, Iteration: 600 / 1000 [ 60%]  (Sampling)
-## Chain 1, Iteration: 700 / 1000 [ 70%]  (Sampling)
-## Chain 1, Iteration: 800 / 1000 [ 80%]  (Sampling)
-## Chain 1, Iteration: 900 / 1000 [ 90%]  (Sampling)
-## Chain 1, Iteration: 1000 / 1000 [100%]  (Sampling)
-##  Elapsed Time: 0.058752 seconds (Warm-up)
-##                0.059294 seconds (Sampling)
-##                0.118046 seconds (Total)
-## 
-## 
-## SAMPLING FOR MODEL 'lm_q5' NOW (CHAIN 2).
-## 
-## Chain 2, Iteration:   1 / 1000 [  0%]  (Warmup)
-## Chain 2, Iteration: 100 / 1000 [ 10%]  (Warmup)
-## Chain 2, Iteration: 200 / 1000 [ 20%]  (Warmup)
-## Chain 2, Iteration: 300 / 1000 [ 30%]  (Warmup)
-## Chain 2, Iteration: 400 / 1000 [ 40%]  (Warmup)
-## Chain 2, Iteration: 500 / 1000 [ 50%]  (Warmup)
-## Chain 2, Iteration: 501 / 1000 [ 50%]  (Sampling)
-## Chain 2, Iteration: 600 / 1000 [ 60%]  (Sampling)
-## Chain 2, Iteration: 700 / 1000 [ 70%]  (Sampling)
-## Chain 2, Iteration: 800 / 1000 [ 80%]  (Sampling)
-## Chain 2, Iteration: 900 / 1000 [ 90%]  (Sampling)
-## Chain 2, Iteration: 1000 / 1000 [100%]  (Sampling)
-##  Elapsed Time: 0.061847 seconds (Warm-up)
-##                0.060015 seconds (Sampling)
-##                0.121862 seconds (Total)</code></pre>
-<pre class="r"><code>m4</code></pre>
-<pre><code>## Inference for Stan model: lm_q5.
-## 2 chains, each with iter=1000; warmup=500; thin=1; 
-## post-warmup draws per chain=500, total post-warmup draws=1000.
-## 
-##          mean se_mean   sd     2.5%      25%      50%      75%    97.5%
-## mu       9.92    0.00 0.09     9.73     9.86     9.92     9.98    10.09
-## lp__ -5551.00    0.03 0.67 -5553.05 -5551.15 -5550.74 -5550.58 -5550.53
-##      n_eff Rhat
-## mu     681    1
-## lp__   540    1
-## 
-## Samples were drawn using NUTS(diag_e) at Tue Apr 25 00:06:14 2017.
-## For each parameter, n_eff is a crude measure of effective sample size,
-## and Rhat is the potential scale reduction factor on split chains (at 
-## convergence, Rhat=1).</code></pre>
-<pre class="r"><code># 97% CI
-print(m4, prob = c(0.005, 0.985))</code></pre>
 <pre><code>## Inference for Stan model: lm_q5.
 ## 2 chains, each with iter=1000; warmup=500; thin=1; 
 ## post-warmup draws per chain=500, total post-warmup draws=1000.
 ## 
 ##          mean se_mean   sd     0.5%    98.5% n_eff Rhat
-## mu       9.92    0.00 0.09     9.69    10.12   681    1
-## lp__ -5551.00    0.03 0.67 -5553.82 -5550.53   540    1
+## mu      10.00    0.00 0.10     9.75    10.20   585    1
+## lp__ -5511.72    0.03 0.68 -5514.70 -5511.22   565    1
 ## 
-## Samples were drawn using NUTS(diag_e) at Tue Apr 25 00:06:14 2017.
+## Samples were drawn using NUTS(diag_e) at Mon May  8 17:21:38 2017.
 ## For each parameter, n_eff is a crude measure of effective sample size,
 ## and Rhat is the potential scale reduction factor on split chains (at 
 ## convergence, Rhat=1).</code></pre>
-<pre class="r"><code># Result results
-cat(&quot;Bayesian mean:&quot;, 10.19) </code></pre>
-<pre><code>## Bayesian mean: 10.19</code></pre>
-<pre class="r"><code>cat(&quot;Bayesian variance:&quot;, 0.00) # very close to 0.01</code></pre>
-<pre><code>## Bayesian variance: 0</code></pre>
-<pre class="r"><code>cat(&quot;Bayesian 97% CI: [9.91, 10.38]&quot;)</code></pre>
 <pre><code>## Bayesian 97% CI: [9.91, 10.38]</code></pre>
 </div>
 <div id="q6" class="section level3">
 <h3>Q6</h3>
-<p>In Q4 we fitted a bayesian model with a highly informative prior (<span class="math inline">\(N(10, 0.1^2)\)</span>) with a few observations (N = 10000), while in Q5 we fitted another bayesian model with a improper flat prior with a much larger sample size (N = 11000). Results show that the means, variances and the confidence intervals for the two obtained posterier distributions are very close. That indicates that when the prior is uninformative, adding more sample sizes could still lead to a valid estiamtion of posterier disribution. Linking back to the formula for the posterier distribution <span class="math inline">\(\mu|x\)</span> given before Q1, the variance is inverse proportional to the amount of data. The more data we have, the less variance in the model. Therefore, the inferrence could still be valid even though we have an uninformative prior as long as we have sufficient data.</p>
+<p>In Q4 we fitted a bayesian model with a highly informative prior (<span class="math inline">\(N(10, 0.1^2)\)</span>) with a few observations (N = 10000), while in Q5 we fitted another bayesian model with a improper flat prior with a much larger sample size (N = 11000). Here we have a prior with variance that is 1/10000 that of the data. Meanwhile, the variance of the mean of the 10,000 new observations is <span class="math inline">\(\frac{100}{10^4}=\frac{1}{0.1^2}\)</span>, which is the same variance as the prior on <span class="math inline">\(\mu\)</span> had and hence should yield similar inference. Results show that the means, variances and the confidence intervals for the two obtained posterier distributions are very close. That indicates that when the prior is uninformative, adding more sample sizes could still lead to a valid estiamtion of posterier disribution. Linking back to the formula for the posterier distribution <span class="math inline">\(\mu|x\)</span> given before Q1, the variance is inverse proportional to the amount of data. The more data we have, the less variance in the model. Therefore, the inferrence could still be valid even though we have an uninformative prior as long as we have sufficient data.</p>
 </div>
 <div id="q7" class="section level3">
 <h3>Q7</h3>
