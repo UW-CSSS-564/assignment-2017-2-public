@@ -13,7 +13,7 @@ date: "April 17, 2017"
 
 ## Instructions
 
-1. Fork this repository to your account
+1. Fork <https://github.com/UW-CSSS-564/assignment-2017-2> to your account
 2. Edit the file `solutions.Rmd` with your solutions to the problems.
 3. Submit a pull request to have it graded. Include either or both a HTML and PDF file.
 
